@@ -9,8 +9,10 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.ListView
+import android.widget.TextView
 import com.example.myapplication.adapter.ComboAdapter
 import com.example.myapplication.adapter.SettingsAdapter
+import com.example.myapplication.countDown.Timer
 import com.example.myapplication.gen.getCombos
 import com.example.myapplication.gen.getTClasses
 import com.example.myapplication.model.TClass
@@ -18,12 +20,6 @@ import com.example.myapplication.model.combo.Combo
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.list
-import android.os.SystemClock
-import android.widget.Chronometer
-import android.widget.TextView
-import com.example.myapplication.countDown.ChronometerListener
-import android.os.CountDownTimer
-import com.example.myapplication.countDown.Timer
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -164,7 +160,11 @@ class MainActivity : AppCompatActivity() {
                             millis
                         )
                     ),
-                    TimeUnit.MILLISECONDS.toMillis(millis) - TimeUnit.SECONDS.toMillis(TimeUnit.MILLISECONDS.toSeconds(millis))
+                    TimeUnit.MILLISECONDS.toMillis(millis) - TimeUnit.SECONDS.toMillis(
+                        TimeUnit.MILLISECONDS.toSeconds(
+                            millis
+                        )
+                    )
 
                 );
             }
