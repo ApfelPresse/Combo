@@ -6,11 +6,11 @@ import java.util.*
 
 abstract class Timer {
 
-    var roundTimer: CountDownTimer? = null
-    val roundRefresh: Long = 50
+    private var roundTimer: CountDownTimer? = null
+    private val roundRefresh: Long = 50
 
-    var comboTimer: CountDownTimer? = null
-    val comboRefresh: Long = 50
+    private var comboTimer: CountDownTimer? = null
+    private val comboRefresh: Long = 50
 
     var queue: Queue<Pair<Settings.Status, Int>> = ArrayDeque<Pair<Settings.Status, Int>>()
 

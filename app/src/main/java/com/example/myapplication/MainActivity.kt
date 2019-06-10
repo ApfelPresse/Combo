@@ -17,6 +17,7 @@ import com.example.myapplication.gen.getCombos
 import com.example.myapplication.gen.getTClasses
 import com.example.myapplication.model.TClass
 import com.example.myapplication.model.combo.Combo
+import com.example.myapplication.model.combo.Strike
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.list
@@ -66,14 +67,32 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    private fun chronometerQueueChangeListener(text: String) {
+    private fun updateRoundStatus(text: String) {
         val view = findViewById<TextView>(R.id.chronometerStatus)
         view.text = text
     }
 
-    private fun chronometerComboStatus(text: String) {
+    private fun updateComboStatus(text: String) {
         val view = findViewById<TextView>(R.id.combo)
         view.text = text
+    }
+
+    private fun updateTime(millis: Long) {
+        findViewById<TextView>(R.id.time).text = String.format(
+            "%d:%d:%d",
+            TimeUnit.MILLISECONDS.toMinutes(millis),
+            TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(
+                TimeUnit.MILLISECONDS.toMinutes(
+                    millis
+                )
+            ),
+            TimeUnit.MILLISECONDS.toMillis(millis) - TimeUnit.SECONDS.toMillis(
+                TimeUnit.MILLISECONDS.toSeconds(
+                    millis
+                )
+            )
+
+        )
     }
 
     /**
@@ -98,19 +117,20 @@ class MainActivity : AppCompatActivity() {
         val timer = object : Timer() {
 
             override fun onFinishCombo() {
-                if (settings.currentStatus == Settings.Status.TRAIN) {
-                    startComboTimer()
+                when (settings.currentStatus) {
+                    Settings.Status.TRAIN -> startComboTimer()
+                    Settings.Status.REST, Settings.Status.STOP, Settings.Status.START -> updateComboStatus("")
                 }
             }
 
             override fun initQueue(): Queue<Pair<Settings.Status, Int>> {
                 val queue: Queue<Pair<Settings.Status, Int>> = ArrayDeque<Pair<Settings.Status, Int>>()
                 for (i in 1..settings.tClass.rounds) {
-                    var p = Pair(Settings.Status.REST, settings.tClass.breaksInMSec)
+                    var element = Pair(Settings.Status.REST, settings.tClass.breaksInMSec)
                     if (i == 1) {
-                        p = Pair(Settings.Status.START, 3000)
+                        element = Pair(Settings.Status.START, 3000)
                     }
-                    queue.add(p)
+                    queue.add(element)
                     queue.add(Pair(Settings.Status.TRAIN, settings.tClass.roundsInMSec))
                 }
                 return queue
@@ -118,15 +138,27 @@ class MainActivity : AppCompatActivity() {
 
             override fun onEnd() {
                 settings.currentStatus = Settings.Status.STOP
-                chronometerQueueChangeListener("Haste fein Gemacht!")
-                chronometerComboStatus("")
+                updateRoundStatus("Haste fein Gemacht!")
             }
 
             override fun nextCombo(): Long {
                 if (settings.currentStatus == Settings.Status.TRAIN) {
-                    val i = chooseOnWeight(settings.combo)
-                    chronometerComboStatus(i.toString())
-                    val l: Int = i * settings.tClass.strikeDelateTime
+                    var i = chooseOnWeight(settings.combo) + 1
+
+                    var comboText = "$i"
+                    if (settings.tClass.additionalStrikes.isNotEmpty() && Math.random() <= settings.tClass.additionalStrikesProb) {
+                        val addition = settings.tClass.additionalStrikes[chooseOnWeight(settings.tClass)].abbreviation
+
+                        // prefix suffix
+                        comboText = if (Math.random() <= 0.5) {
+                            "$i + $addition"
+                        } else {
+                            "$addition + $i"
+                        }
+                        i += 1
+                    }
+                    updateComboStatus(comboText)
+                    val l: Int = i * settings.tClass.timePerStrike
                     return l.toLong()
                 }
                 return 100
@@ -135,55 +167,48 @@ class MainActivity : AppCompatActivity() {
             override fun onPoll(status: Pair<Settings.Status, Int>) {
                 settings.currentStatus = status.first
                 if (status.first == Settings.Status.START) {
-                    chronometerComboStatus("")
-                    chronometerQueueChangeListener("GET READY!!")
+                    updateRoundStatus("GET READY!!")
                 }
 
                 if (status.first == Settings.Status.REST) {
-                    chronometerComboStatus("")
-                    chronometerQueueChangeListener("REST")
+                    updateRoundStatus("REST")
                 }
 
                 if (status.first == Settings.Status.TRAIN) {
                     settings.currentRound += 1
-                    chronometerQueueChangeListener("Round " + settings.currentRound)
+                    updateRoundStatus("Round " + settings.currentRound)
                     startComboTimer()
                 }
             }
 
             override fun onTickRound(millis: Long) {
-                findViewById<TextView>(R.id.time).text = String.format(
-                    "%d:%d:%d",
-                    TimeUnit.MILLISECONDS.toMinutes(millis),
-                    TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(
-                        TimeUnit.MILLISECONDS.toMinutes(
-                            millis
-                        )
-                    ),
-                    TimeUnit.MILLISECONDS.toMillis(millis) - TimeUnit.SECONDS.toMillis(
-                        TimeUnit.MILLISECONDS.toSeconds(
-                            millis
-                        )
-                    )
-
-                );
+                updateTime(millis)
             }
-
-
         }
         timer.start()
     }
 
     @RequiresApi(Build.VERSION_CODES.N)
     fun chooseOnWeight(combo: Combo): Int {
-        var completeWeight = combo.weights.stream().mapToInt(Int::toInt).sum()
+        return chooseOnWeight(combo.strikes, combo.weights)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.N)
+    fun chooseOnWeight(t: TClass): Int {
+        return chooseOnWeight(t.additionalStrikes, t.weights)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.N)
+    fun chooseOnWeight(strikes: MutableList<Strike>, weights: MutableList<Int>): Int {
+        var completeWeight = weights.stream().mapToInt(Int::toInt).sum()
         val r = Math.random() * completeWeight
         var countWeight = 0.0
-        for (i in 0..combo.strikes.size) {
-            countWeight += combo.weights[i]
+        for (i in 0..strikes.size) {
+            countWeight += weights[i]
             if (countWeight >= r)
-                return i + 1
+                return i
         }
         throw RuntimeException("Should never be shown.")
     }
+
 }

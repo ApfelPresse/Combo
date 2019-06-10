@@ -13,11 +13,20 @@ import kotlinx.serialization.list
  *
  */
 
-public fun getTClasses(): String {
+@RequiresApi(Build.VERSION_CODES.N)
+fun getTClasses(): String {
+    val strikes = Json.parse(Strike.serializer().list, getStrikes())
+
+    val jab = strikes.stream().filter { t -> t.name.equals("Jab") }.findFirst().orElse(null)
+    val cross = strikes.stream().filter { t -> t.name.equals("Cross") }.findFirst().orElse(null)
+
     val classD = TClass("D-Class")
     classD.rounds = 3
     classD.roundsInMSec = 20000
     classD.breaksInMSec = 5000
+    classD.additionalStrikesProb = 0.9
+    classD.additionalStrikes.addAll(listOf(jab, cross))
+    classD.weights = MutableList(classD.additionalStrikes.size) { 1 }
 
     val classC = TClass("C-Class")
     classC.rounds = 5
@@ -41,7 +50,7 @@ public fun getTClasses(): String {
 }
 
 @RequiresApi(Build.VERSION_CODES.N)
-public fun getCombos(): String {
+fun getCombos(): String {
     val strikes = Json.parse(Strike.serializer().list, getStrikes())
 
     val jab = strikes.stream().filter { t -> t.name.equals("Jab") }.findFirst().orElse(null)
@@ -53,11 +62,11 @@ public fun getCombos(): String {
 
     val combo1 = Combo("Combo1")
     combo1.strikes.addAll(listOf(jab, cross, hookLeft, hookRight, uppercut))
-    combo1.weights = MutableList(combo1.strikes.size) {index -> 1}
+    combo1.weights = MutableList(combo1.strikes.size) { 1 }
 
     val combo2 = Combo("Combo2")
     combo2.strikes.addAll(listOf(jab, cross, hookLeft, bodyLeft))
-    combo2.weights = MutableList(combo2.strikes.size) {index -> 1}
+    combo2.weights = MutableList(combo2.strikes.size) { 1 }
 
     val combos: MutableList<Combo> = ArrayList()
     combos.add(combo1)

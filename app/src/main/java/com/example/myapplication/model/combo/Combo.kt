@@ -9,5 +9,8 @@ class Combo(val name: String?) {
 
     val strikes: MutableList<Strike> = ArrayList()
 
+    /**
+     * strike weights
+     */
     var weights: MutableList<Int> = ArrayList()
 }

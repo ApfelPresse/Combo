@@ -1,6 +1,5 @@
 package com.example.myapplication.model
 
-import com.example.myapplication.model.combo.Combo
 import com.example.myapplication.model.combo.Strike
 import kotlinx.serialization.Serializable
 
@@ -14,7 +13,14 @@ class TClass(val name: String) {
     var breaksInMSec: Int = 60000
 
     // ms per strike in combo
-    var strikeDelateTime: Int = 700
+    var timePerStrike: Int = 700
 
-    val additionalStrikes: List<Strike> = emptyList()
+    var additionalStrikesProb: Double = 0.1
+
+    val additionalStrikes: MutableList<Strike> = ArrayList()
+
+    /**
+     * additional strike weights
+     */
+    var weights: MutableList<Int> = ArrayList()
 }
